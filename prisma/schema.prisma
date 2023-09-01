@@ -1,0 +1,110 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  name           String?
+  email          String?   @unique
+  emailVerified  DateTime?
+  image          String?
+  role           String?
+  hashedPassword String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  accounts       Account[]
+
+  matchIds String[] @db.ObjectId
+  matchs   Match[]  @relation(fields: [matchIds], references: [id])
+
+  message Message[]
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model League {
+  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  name   String? @unique
+  logo   String?
+  teams  Team[]
+  matchs Match[]
+}
+
+model Team {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  name      String?
+  logo      String?
+  homeMatch Match[] @relation("HomeMatch")
+  awayMatch Match[] @relation("AwayMatch")
+  leagueId  String  @db.ObjectId
+  league    League  @relation(fields: [leagueId], references: [id], onUpdate: Cascade)
+}
+
+model Match {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  time        DateTime
+  stadium     String?
+  commentator String? // blv
+  homeTeamId  String   @db.ObjectId
+  homeTeam    Team     @relation("HomeMatch", fields: [homeTeamId], references: [id])
+  awayTeamId  String   @db.ObjectId
+  awayTeam    Team     @relation("AwayMatch", fields: [awayTeamId], references: [id])
+  score       String? // tỷ số
+  start       Boolean?
+  link        String?
+  roundId     String @db.ObjectId
+  round       Round @relation(fields: [roundId], references: [id])
+
+  leagueId String @db.ObjectId
+  league   League @relation(fields: [leagueId], references: [id], onUpdate: Cascade)
+
+  messagesIds String[]  @db.ObjectId
+  messages    Message[]
+
+  userIds String[] @db.ObjectId
+  users   User[]   @relation(fields: [userIds], references: [id])
+}
+
+model Message {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  body     String?
+  createAt DateTime @default(now())
+  matchId  String   @db.ObjectId
+  match    Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  senderId String @db.ObjectId
+  sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model Round {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  round    Int
+  isAction Boolean
+
+  match Match[]
+}
